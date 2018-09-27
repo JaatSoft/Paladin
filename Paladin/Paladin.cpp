@@ -566,9 +566,15 @@ App::CreateNewProject(const BMessage &settings)
 {
 	Project *proj = NULL;
 	
-	BString projectName, targetName, projectPath, templateName, pldName;
-	int32 projectType, scmType;
-	bool createFolder, populateProject = true;
+	BString projectName;
+	BString targetName;
+	BString projectPath;
+	BString templateName;
+	BString pldName;
+	int32 projectType;
+	int32 scmType;
+	bool createFolder;
+	bool populateProject = true;
 	
 	settings.FindString("name",&projectName);
 	settings.FindString("target",&targetName);
@@ -597,7 +603,7 @@ App::CreateNewProject(const BMessage &settings)
 		if (createFolder)
 		{
 			destPath << projectName;
-			create_directory(destPath.GetFullPath(), 0777);
+			create_directory(destPath.GetFullPath(), 0700);
 		}
 		
 		BString wildcard("'");
@@ -606,6 +612,18 @@ App::CreateNewProject(const BMessage &settings)
 		shell << wildcard;
 		shell.AddQuotedArg(destPath.GetFullPath());
 		shell.Run();
+		// Set all files and folders executable for this user only u+rwx
+		ShellHelper chmod("chmod -R 700 ");
+		chmod.AddQuotedArg(destPath.GetFullPath());
+		chmod.Run();
+		// set source files themselves to u+rw
+		// TODO fix this - doesn't seem to change any permissions
+		// TODO investigate why we can't just do this in C++
+		ShellHelper filemod("chmod 600 ");
+		BString wildcardall("");
+		wildcardall << sourcePath.GetFullPath() << "/*.*";
+		filemod.AddQuotedArg(wildcardall);
+		filemod.Run();
 		
 		// The copy command copies *everything*, so we have to delete the
 		// TEMPLATEINFO file.
